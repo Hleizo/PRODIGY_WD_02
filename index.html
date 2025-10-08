@@ -1,188 +1,106 @@
-/* ========= base theme ========= */
-:root{
-  --bg:#0e1223;
-  --panel:#141936;
-  --panel-2:#0f1330;
-  --surface:rgba(255,255,255,.04);
-  --ink:#eef2ff;
-  --muted:#b9c0f1;
-  --line:#232a57;
-  --accent:#7c5cff;       /* user-changable */
-  --accent-ink:#0d051d;
-  --ok:#22c55e;
-  --warn:#f59e0b;
-  --danger:#ef4444;
-  --radius:18px;
-}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Productive Stopwatch — Task 02</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- background blobs -->
+  <div class="bg-blob" aria-hidden="true"></div>
+  <div class="bg-blob2" aria-hidden="true"></div>
 
-:root.light{
-  --bg:#f5f7ff;
-  --panel:#ffffff;
-  --panel-2:#ffffff;
-  --surface:#f2f4ff;
-  --ink:#0b1020;
-  --muted:#5a628a;
-  --line:#e2e6ff;
-  --accent:#5a6cff;
-  --accent-ink:#ffffff;
-}
+  <main class="shell">
+    <header class="topbar">
+      <h1 class="app-title">Productive Stopwatch</h1>
+      <div class="controls-right">
+        <label class="color-swatch" title="Accent color">
+          <input id="accentPicker" type="color" value="#7c5cff" aria-label="Pick accent color" />
+          <span class="swatch"></span>
+        </label>
+        <button id="themeToggle" class="btn icon" aria-label="Toggle theme" title="Toggle theme">☼/☾</button>
+      </div>
+    </header>
 
-/* playful moving blobs in back */
-.bg-blob,.bg-blob2{
-  position:fixed; inset:auto; z-index:-1; pointer-events:none;
-  width:60vmax; height:60vmax; filter:blur(80px); opacity:.4;
-  background:radial-gradient(closest-side, var(--accent) 0%, transparent 70%);
-  animation: float 18s ease-in-out infinite;
-}
-.bg-blob{top:-10vmax; right:-10vmax}
-.bg-blob2{bottom:-15vmax; left:-15vmax; animation-duration:22s}
+    <!-- Tabs -->
+    <nav class="tabs" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" data-tab="stopwatch">Stopwatch</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tasks">Tasks</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="notes">Notes</button>
+    </nav>
 
-@keyframes float{
-  0%{transform:translate3d(0,0,0) rotate(0)}
-  50%{transform:translate3d(2vmax, -1vmax, 0) rotate(10deg)}
-  100%{transform:translate3d(0,0,0) rotate(0)}
-}
+    <!-- STOPWATCH -->
+    <section id="stopwatch" class="panel active" role="tabpanel">
+      <div class="time-wrap">
+        <div id="time" class="time">00:00.00</div>
+      </div>
 
-/* ========= layout ========= */
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; background:var(--bg); color:var(--ink);
-  font:500 16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans";
-}
+      <div class="button-row">
+        <button id="startPause" class="btn primary" aria-pressed="false">Start</button>
+        <button id="lap" class="btn" disabled>Lap</button>
+        <button id="reset" class="btn" disabled>Reset</button>
+        <button id="export" class="btn ghost" disabled>Export CSV</button>
+      </div>
 
-.shell{
-  min-height:100svh;
-  max-width:1000px; margin:0 auto; padding:24px 18px 40px;
-}
+      <div class="lap-card">
+        <div class="lap-head">
+          <h2>Laps</h2>
+          <button id="clearLaps" class="link" disabled>Clear</button>
+        </div>
+        <div class="table">
+          <div class="row row--head">
+            <span>#</span><span>Lap</span><span>Total</span>
+          </div>
+          <div id="lapRows" class="rows"></div>
+        </div>
+      </div>
 
-.topbar{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:12px; margin-bottom:6px;
-}
-.app-title{margin:0; font-size:clamp(22px,4vw,32px); letter-spacing:.3px}
+      <p class="hint">Shortcuts: <kbd>Space</kbd> Start/Pause • <kbd>L</kbd> Lap • <kbd>R</kbd> Reset</p>
+    </section>
 
-.controls-right{display:flex; gap:8px; align-items:center}
+    <!-- TASKS -->
+    <section id="tasks" class="panel" role="tabpanel">
+      <form id="taskForm" class="card form">
+        <input id="taskTitle" class="input" type="text" placeholder="Add a new task…" required />
+        <input id="taskDue" class="input" type="datetime-local" />
+        <button class="btn primary" type="submit">Add Task</button>
+      </form>
 
-.color-swatch{position:relative; display:inline-grid; place-items:center}
-.color-swatch input{appearance:none; width:0; height:0; position:absolute}
-.color-swatch .swatch{
-  width:32px; height:32px; border-radius:999px;
-  background:var(--accent); border:2px solid rgba(0,0,0,.2);
-  box-shadow:0 6px 20px rgba(0,0,0,.25), inset 0 0 0 2px rgba(255,255,255,.25);
-}
+      <div class="toolbar">
+        <label class="filter">
+          <span>Show:</span>
+          <select id="taskFilter" class="input">
+            <option value="all">All</option>
+            <option value="open" selected>Open</option>
+            <option value="done">Completed</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </label>
+      </div>
 
-.tabs{
-  display:flex; gap:8px; margin:12px 0 16px;
-}
-.tab{
-  border:1px solid var(--line);
-  background:var(--surface);
-  color:var(--ink); padding:10px 16px; border-radius:14px;
-  cursor:pointer; font-weight:700; letter-spacing:.2px;
-  transition:transform .06s ease, box-shadow .06s ease, background .2s;
-}
-.tab.active{background:linear-gradient(180deg, rgba(255,255,255,.08), transparent), var(--panel); box-shadow:0 10px 28px rgba(0,0,0,.24)}
-.tab:hover{transform:translateY(-1px)}
+      <div id="taskList" class="card list"></div>
+    </section>
 
-.panel{
-  display:none; animation:fadeIn .28s ease;
-}
-.panel.active{display:block}
-@keyframes fadeIn{from{opacity:.0; transform:translateY(6px)} to{opacity:1; transform:none}}
+    <!-- NOTES -->
+    <section id="notes" class="panel" role="tabpanel">
+      <form id="noteForm" class="card form">
+        <input id="noteTitle" class="input" type="text" placeholder="Note title…" required />
+        <textarea id="noteBody" class="input area" rows="4" placeholder="Write your note…"></textarea>
+        <div class="row-between">
+          <input id="noteSearch" class="input" type="search" placeholder="Search notes…" />
+          <button class="btn primary" type="submit">Add Note</button>
+        </div>
+      </form>
 
-.card{
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.02)), var(--panel);
-  border:1px solid var(--line); border-radius:var(--radius); padding:14px;
-  box-shadow:0 20px 60px rgba(0,0,0,.3);
-}
+      <div id="noteList" class="grid-notes"></div>
+    </section>
 
-.time-wrap{display:grid; place-items:center}
-.time{
-  font-variant-numeric:tabular-nums; font-weight:800; line-height:1;
-  font-size:clamp(44px, 10vw, 82px); letter-spacing:.5px;
-  padding:18px 24px; border-radius:18px; width:100%; text-align:center;
-  background:var(--surface); border:1px solid var(--line);
-}
+    <footer class="foot">
+      <small>© <span id="year"></span> Hasan Zeineddin</small>
+    </footer>
+  </main>
 
-.button-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:18px 0 12px}
-.btn{
-  cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--ink);
-  padding:10px 16px; border-radius:12px; font-weight:800; min-width:120px;
-  transition:transform .06s ease, box-shadow .06s ease, background .2s;
-  position:relative; overflow:hidden;
-}
-.btn:hover{transform:translateY(-1px)}
-.btn:disabled{opacity:.55; cursor:not-allowed; transform:none}
-.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:transparent}
-.btn.ghost{background:transparent}
-.btn.icon{min-width:auto; padding:10px}
-
-.link{background:transparent; border:0; color:var(--accent); cursor:pointer; font-weight:800}
-.hint{color:var(--muted); margin-top:6px}
-
-.lap-card{margin-top:8px}
-.lap-head{display:flex; align-items:center; justify-content:space-between}
-.table{margin-top:10px; border:1px solid var(--line); border-radius:14px; overflow:hidden}
-.row{display:grid; grid-template-columns:64px 1fr 1fr; gap:12px; padding:10px 14px; align-items:center}
-.row--head{background:rgba(255,255,255,.05); color:var(--muted); font-weight:800}
-.rows .row:nth-child(odd){background:rgba(255,255,255,.03)}
-
-/* forms / inputs */
-.input{
-  width:100%; background:var(--surface); color:var(--ink);
-  border:1px solid var(--line); border-radius:12px; padding:10px 12px;
-}
-.area{resize:vertical}
-.form{display:grid; gap:10px; margin-bottom:12px}
-
-.toolbar{display:flex; justify-content:flex-end; margin:8px 0}
-.filter{display:flex; align-items:center; gap:8px; color:var(--muted)}
-
-.list{display:grid; gap:8px}
-.task{
-  display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
-  padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);
-  transition:transform .12s ease, background .2s;
-}
-.task.done{opacity:.7}
-.task .title{font-weight:700}
-.task .meta{color:var(--muted); font-size:13px}
-.badge{padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px}
-.badge.warn{border-color:var(--warn); color:var(--warn)}
-.badge.ok{border-color:var(--ok); color:var(--ok)}
-.task button{border:0; background:transparent; cursor:pointer; color:var(--muted); font-weight:800}
-.task button:hover{color:var(--ink)}
-
-.grid-notes{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px}
-.note{
-  padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--panel-2);
-  display:grid; gap:6px; transition:transform .12s ease;
-}
-.note:hover{transform:translateY(-2px)}
-.note h3{margin:2px 0}
-.note p{margin:0; color:var(--muted)}
-.note .bar{display:flex; justify-content:space-between; align-items:center; gap:6px}
-.note .bar button{border:0; background:transparent; cursor:pointer; color:var(--muted); font-weight:800}
-.note .bar button:hover{color:var(--ink)}
-
-.row-between{display:flex; gap:8px; align-items:center; justify-content:space-between}
-
-.foot{margin-top:22px; text-align:center; color:var(--muted)}
-kbd{padding:.1rem .4rem; border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; background:var(--surface); font-weight:800}
-
-/* ripple effect host */
-#rippleHost{position:fixed; inset:0; pointer-events:none}
-.rip{
-  position:absolute; width:4px; height:4px; border-radius:999px; opacity:.6;
-  background:var(--accent); transform:translate(-50%,-50%) scale(1);
-  animation:rip 650ms ease-out forwards;
-}
-@keyframes rip{
-  to{opacity:0; transform:translate(-50%,-50%) scale(30)}
-}
-
-/* small screens */
-@media (max-width:540px){
-  .row{grid-template-columns:48px 1fr 1fr}
-}
+  <script src="./script.js" defer></script>
+</body>
+</html>
