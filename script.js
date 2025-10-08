@@ -1,51 +1,68 @@
-// ========= tiny helpers =========
-const $  = (s, c=document) => c.querySelector(s);
+// ---------- helpers ----------
+const $ = (s, c=document) => c.querySelector(s);
 const $$ = (s, c=document) => Array.from(c.querySelectorAll(s));
-const storage = {
-  get: (k, d=null) => {
-    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }
-    catch { return d; }
-  },
-  set: (k, v) => localStorage.setItem(k, JSON.stringify(v))
+const store = {
+  get: (k, d=null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
 };
-const uid = () => (crypto?.randomUUID?.() ?? (`id_${Date.now()}_${Math.random().toString(36).slice(2)}`));
+const uid = () => (crypto?.randomUUID?.() ?? ('id_'+Date.now()+'_'+Math.random().toString(36).slice(2)));
 
-// ========= theme & color =========
-const accentPicker = $('#accentPicker');
-const themeToggle  = $('#themeToggle');
-function applyAccent(hex){
-  document.documentElement.style.setProperty('--accent', hex);
-  const sw = document.querySelector('.color-swatch .swatch');
-  if (sw) sw.style.background = hex;
+// ---------- theme ----------
+const chips = $$('.chip');
+const toggleTheme = $('#toggleTheme');
+function applyAccent(hex){ document.documentElement.style.setProperty('--accent', hex); }
+function loadTheme(){
+  const accent = store.get('accent', '#7c5cff');
+  const isLight = !!store.get('theme-light', false);
+  applyAccent(accent);
+  document.documentElement.classList.toggle('light', isLight);
 }
-(function initTheme(){
-  const savedAccent = storage.get('accent', null);
-  const light = storage.get('theme-light', false);
-  if (savedAccent){ accentPicker.value = savedAccent; applyAccent(savedAccent); }
-  document.documentElement.classList.toggle('light', !!light);
-})();
-accentPicker.addEventListener('input', e => {
-  applyAccent(e.target.value);
-  storage.set('accent', e.target.value);
-});
-themeToggle.addEventListener('click', () => {
-  const next = !document.documentElement.classList.contains('light');
-  document.documentElement.classList.toggle('light', next);
-  storage.set('theme-light', next);
+chips.forEach(ch => ch.addEventListener('click', () => {
+  const hex = ch.dataset.accent;
+  applyAccent(hex); store.set('accent', hex); pulse(ch);
+}));
+toggleTheme.addEventListener('click', () => {
+  const now = !document.documentElement.classList.contains('light');
+  document.documentElement.classList.toggle('light', now);
+  store.set('theme-light', now);
+  pulse(toggleTheme);
+}));
+
+// tiny ripple / pulse
+const host = $('#ripples');
+function pulse(el){
+  const r = el.getBoundingClientRect();
+  const x = r.left + r.width/2, y = r.top + r.height/2;
+  const dot = document.createElement('span');
+  dot.className = 'rip'; dot.style.left = x+'px'; dot.style.top = y+'px';
+  host.appendChild(dot); setTimeout(()=>dot.remove(), 700);
+}
+window.addEventListener('click', e=>{
+  if(e.target.closest('.btn,.tab,.chip,[data-action]')) pulse(e.target);
 });
 
-// ========= tabs =========
-$$('.tab').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    $$('.tab').forEach(b=>b.classList.remove('active'));
+// ---------- tabs with moving underline ----------
+const tabs = $$('.tab');
+const underline = $('.tab-underline');
+function positionUnderline(){
+  const active = $('.tab.active');
+  const r = active.getBoundingClientRect();
+  const container = $('.tabs').getBoundingClientRect();
+  underline.style.width = r.width + 'px';
+  underline.style.transform = `translateX(${r.left - container.left}px)`;
+  underline.style.background = getComputedStyle(document.documentElement).getPropertyValue('--accent');
+}
+tabs.forEach(b=>{
+  b.addEventListener('click', ()=>{
+    tabs.forEach(t=>t.classList.remove('active'));
     $$('.panel').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    $('#'+btn.dataset.tab).classList.add('active');
+    b.classList.add('active'); $('#'+b.dataset.tab).classList.add('active');
+    positionUnderline();
   });
 });
 
-// ========= stopwatch =========
-let startTime = 0, elapsed = 0, running = false, raf = null;
+// ---------- stopwatch ----------
+let startTime=0, elapsed=0, running=false, raf=null, lastTotal=0;
 const timeEl = $('#time');
 const btnStartPause = $('#startPause');
 const btnLap = $('#lap');
@@ -54,7 +71,6 @@ const btnExport = $('#export');
 const btnClear = $('#clearLaps');
 const lapRows = $('#lapRows');
 const laps = [];
-let lastTotal = 0;
 
 const fmt = (ms)=>{
   const cs = Math.floor(ms/10)%100;
@@ -64,50 +80,17 @@ const fmt = (ms)=>{
   const pad = (n,z=2)=>String(n).padStart(z,'0');
   return (h>0?`${pad(h)}:`:'') + `${pad(m)}:${pad(s)}.${pad(cs)}`;
 };
-
-function tick(){
-  elapsed = performance.now() - startTime;
-  timeEl.textContent = fmt(elapsed);
-  raf = requestAnimationFrame(tick);
-}
-function start(){
-  running = true;
-  btnStartPause.textContent = 'Pause';
-  btnStartPause.setAttribute('aria-pressed', 'true');
-  btnLap.disabled = btnReset.disabled = false;
-  startTime = performance.now() - elapsed;
-  raf = requestAnimationFrame(tick);
-}
-function pause(){
-  running = false;
-  btnStartPause.textContent = 'Start';
-  btnStartPause.setAttribute('aria-pressed', 'false');
-  cancelAnimationFrame(raf);
-}
-function reset(){
-  pause();
-  elapsed = 0; lastTotal = 0;
-  timeEl.textContent = '00:00.00';
-  laps.length = 0; lapRows.innerHTML = '';
-  btnLap.disabled = btnReset.disabled = true;
-  btnExport.disabled = btnClear.disabled = true;
-}
+function tick(){ elapsed = performance.now() - startTime; timeEl.textContent = fmt(elapsed); raf = requestAnimationFrame(tick); }
+function start(){ running=true; btnStartPause.textContent='Pause'; btnLap.disabled=btnReset.disabled=false; startTime=performance.now()-elapsed; raf=requestAnimationFrame(tick); }
+function pause(){ running=false; btnStartPause.textContent='Start'; cancelAnimationFrame(raf); }
+function reset(){ pause(); elapsed=0; lastTotal=0; timeEl.textContent='00:00.00'; laps.length=0; lapRows.innerHTML=''; btnLap.disabled=btnReset.disabled=true; btnExport.disabled=btnClear.disabled=true; }
 function addLap(){
-  const total = elapsed;
-  const lap = total - lastTotal;
-  lastTotal = total;
-  laps.push({ lap, total });
-  renderLaps();
+  const total = elapsed, lap = total - lastTotal; lastTotal = total;
+  laps.push({lap,total});
+  const row = document.createElement('div');
+  row.className='r'; row.innerHTML = `<span>${laps.length}</span><span>${fmt(lap)}</span><span>${fmt(total)}</span>`;
+  lapRows.appendChild(row);
   btnExport.disabled = btnClear.disabled = false;
-}
-function renderLaps(){
-  lapRows.innerHTML = laps.map((l,i)=>`
-    <div class="row">
-      <span>${i+1}</span>
-      <span>${fmt(l.lap)}</span>
-      <span>${fmt(l.total)}</span>
-    </div>
-  `).join('');
 }
 function exportCSV(){
   if(!laps.length) return;
@@ -117,59 +100,62 @@ function exportCSV(){
   const a = Object.assign(document.createElement('a'), {href:url, download:'stopwatch_laps.csv'});
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
-function clearLaps(){
-  laps.length = 0; lastTotal = 0; lapRows.innerHTML = '';
-  btnExport.disabled = btnClear.disabled = true;
-}
+function clearLaps(){ laps.length=0; lastTotal=0; lapRows.innerHTML=''; btnExport.disabled=btnClear.disabled=true; }
 
-btnStartPause.addEventListener('click', ()=> running ? pause() : start());
+btnStartPause.addEventListener('click', ()=> running?pause():start());
 btnLap.addEventListener('click', addLap);
 btnReset.addEventListener('click', reset);
 btnExport.addEventListener('click', exportCSV);
 btnClear.addEventListener('click', clearLaps);
-window.addEventListener('keydown', (e)=>{
+window.addEventListener('keydown', e=>{
   if(e.code==='Space'){ e.preventDefault(); running?pause():start(); }
   else if(e.key.toLowerCase()==='l' && !btnLap.disabled){ addLap(); }
   else if(e.key.toLowerCase()==='r' && !btnReset.disabled){ reset(); }
 });
 
-// ========= tasks =========
-const taskForm  = $('#taskForm');
+// ---------- tasks ----------
+const taskForm = $('#taskForm');
 const taskTitle = $('#taskTitle');
-const taskDue   = $('#taskDue');
-const taskList  = $('#taskList');
-const taskFilter= $('#taskFilter');
+const taskDue = $('#taskDue');
+const taskFilter = $('#taskFilter');
+const taskList = $('#taskList');
 
-let tasks = storage.get('tasks', []); // [{id,title,due,done}]
-const saveTasks = ()=> storage.set('tasks', tasks);
+let tasks = store.get('tasks', []); // [{id,title,due,done}]
+const saveTasks = () => store.set('tasks', tasks);
 
-function taskRow(t){
+function taskItem(t){
   const overdue = !t.done && t.due && (new Date(t.due) < new Date());
-  const dueText = t.due ? new Date(t.due).toLocaleString() : 'No due';
-  return `
-  <div class="task ${t.done?'done':''}" data-id="${t.id}">
+  const dueTxt = t.due ? new Date(t.due).toLocaleString() : 'No due';
+  const el = document.createElement('div');
+  el.className = 'glass task';
+  el.dataset.id = t.id;
+  el.innerHTML = `
     <label><input type="checkbox" ${t.done?'checked':''}></label>
     <div>
-      <div class="title">${t.title}</div>
-      <div class="meta">${dueText} ${overdue?'<span class="badge warn">Overdue</span>':''} ${t.done?'<span class="badge ok">Done</span>':''}</div>
+      <div class="title" contenteditable="true" spellcheck="false">${t.title}</div>
+      <div class="meta">${dueTxt} ${t.done?'<span class="badge ok">Done</span>':''} ${overdue?'<span class="badge warn">Overdue</span>':''}</div>
     </div>
-    <div><button class="del" title="Delete">✕</button></div>
-  </div>`;
+    <div>
+      <button data-action="del" title="Delete">✕</button>
+    </div>`;
+  return el;
 }
 function renderTasks(){
   const mode = taskFilter.value;
+  taskList.textContent = '';
   let view = tasks.slice();
   if(mode==='open') view = view.filter(t=>!t.done);
   if(mode==='done') view = view.filter(t=>t.done);
-  if(mode==='overdue') view = view.filter(t=>!t.done && t.due && (new Date(t.due) < new Date()));
+  if(mode==='overdue') view = view.filter(t=>!t.done && t.due && (new Date(t.due)<new Date()));
   view.sort((a,b)=>(a.due||'').localeCompare(b.due||''));
-  taskList.innerHTML = view.length ? view.map(taskRow).join('') : `<div class="card">No tasks yet.</div>`;
+  if(!view.length){ const empty=document.createElement('div'); empty.className='glass card'; empty.textContent='No tasks.'; taskList.appendChild(empty); return; }
+  view.forEach(t=>taskList.appendChild(taskItem(t)));
 }
 taskForm.addEventListener('submit', e=>{
   e.preventDefault();
   const title = taskTitle.value.trim(); if(!title) return;
   tasks.push({id:uid(), title, due:taskDue.value||null, done:false});
-  saveTasks(); renderTasks(); taskForm.reset(); taskTitle.focus();
+  saveTasks(); taskForm.reset(); taskTitle.focus(); renderTasks();
 });
 taskList.addEventListener('change', e=>{
   const wrap = e.target.closest('.task'); if(!wrap) return;
@@ -177,70 +163,84 @@ taskList.addEventListener('change', e=>{
   t.done = e.target.checked; saveTasks(); renderTasks();
 });
 taskList.addEventListener('click', e=>{
-  if(e.target.classList.contains('del')){
+  if(e.target.dataset.action==='del'){
     const id = e.target.closest('.task').dataset.id;
     tasks = tasks.filter(x=>x.id!==id); saveTasks(); renderTasks();
   }
 });
+taskList.addEventListener('blur', e=>{
+  const task = e.target.closest('.task');
+  if(task && e.target.classList.contains('title')){
+    const t = tasks.find(x=>x.id===task.dataset.id); if(!t) return;
+    const txt = e.target.textContent.trim();
+    if(txt){ t.title = txt; saveTasks(); }
+    else { e.target.textContent = t.title; }
+  }
+}, true);
 taskFilter.addEventListener('change', renderTasks);
 
-// ========= notes =========
-const noteForm  = $('#noteForm');
+// ---------- notes ----------
+const noteForm = $('#noteForm');
 const noteTitle = $('#noteTitle');
-const noteBody  = $('#noteBody');
-const noteSearch= $('#noteSearch');
-const noteList  = $('#noteList');
+const noteBody = $('#noteBody');
+const noteSearch = $('#noteSearch');
+const noteList = $('#noteList');
 
-let notes = storage.get('notes', []); // [{id,title,body,ts}]
-const saveNotes = ()=> storage.set('notes', notes);
+let notes = store.get('notes', []); // [{id,title,body,ts}]
+const saveNotes = () => store.set('notes', notes);
 
 function noteCard(n){
-  const date = new Date(n.ts).toLocaleString();
-  const snippet = (n.body || '').slice(0, 120);
-  return `
-  <article class="note" data-id="${n.id}">
+  const c = document.createElement('article');
+  c.className = 'glass note';
+  c.dataset.id = n.id;
+  c.innerHTML = `
     <div class="bar">
-      <h3>${n.title}</h3>
+      <h3 contenteditable="true" spellcheck="false">${n.title}</h3>
       <div>
-        <button class="edit" title="Edit">✎</button>
-        <button class="rm" title="Delete">✕</button>
+        <button data-action="edit">✎</button>
+        <button data-action="rm">✕</button>
       </div>
     </div>
-    <p>${snippet}</p>
-    <small class="meta">${date}</small>
-  </article>`;
+    <p contenteditable="true" spellcheck="false">${n.body}</p>
+    <small class="meta">${new Date(n.ts).toLocaleString()}</small>`;
+  return c;
 }
 function renderNotes(){
   const q = noteSearch.value.trim().toLowerCase();
+  noteList.textContent = '';
   const view = notes
     .filter(n => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
     .sort((a,b)=>b.ts - a.ts);
-  noteList.innerHTML = view.length ? view.map(noteCard).join('') : `<div class="card">No notes yet.</div>`;
+  if(!view.length){ const empty=document.createElement('div'); empty.className='glass card'; empty.textContent='No notes.'; noteList.appendChild(empty); return; }
+  view.forEach(n=>noteList.appendChild(noteCard(n)));
 }
 noteForm.addEventListener('submit', e=>{
   e.preventDefault();
   const title = noteTitle.value.trim(); if(!title) return;
   notes.push({id:uid(), title, body:noteBody.value||'', ts:Date.now()});
-  saveNotes(); renderNotes(); noteForm.reset(); noteTitle.focus();
+  saveNotes(); noteForm.reset(); noteTitle.focus(); renderNotes();
 });
 noteList.addEventListener('click', e=>{
   const card = e.target.closest('.note'); if(!card) return;
-  const id = card.dataset.id;
-  const n = notes.find(x=>x.id===id); if(!n) return;
-  if(e.target.classList.contains('rm')){
-    notes = notes.filter(x=>x.id!==id); saveNotes(); renderNotes();
-  }else if(e.target.classList.contains('edit')){
-    const title = prompt('Edit title:', n.title); if(title===null) return;
-    const body  = prompt('Edit body:', n.body);  if(body===null) return;
-    n.title = title.trim() || n.title;
-    n.body  = body; n.ts = Date.now();
-    saveNotes(); renderNotes();
+  const id = card.dataset.id; const n = notes.find(x=>x.id===id); if(!n) return;
+  if(e.target.dataset.action==='rm'){ notes = notes.filter(x=>x.id!==id); saveNotes(); renderNotes(); }
+  else if(e.target.dataset.action==='edit'){ // bump timestamp
+    n.ts = Date.now(); saveNotes(); renderNotes();
   }
 });
+noteList.addEventListener('blur', e=>{
+  const card = e.target.closest('.note'); if(!card) return;
+  const id = card.dataset.id; const n = notes.find(x=>x.id===id); if(!n) return;
+  n.title = card.querySelector('h3').textContent.trim() || n.title;
+  n.body  = card.querySelector('p').textContent;
+  n.ts = Date.now(); saveNotes();
+}, true);
 noteSearch.addEventListener('input', renderNotes);
 
-// ========= footer & init =========
+// ---------- footer + init ----------
 $('#year').textContent = new Date().getFullYear();
+loadTheme();
+positionUnderline();
 renderTasks();
 renderNotes();
-reset(); // stopwatch into clean state
+reset();   // put stopwatch in a clean state
