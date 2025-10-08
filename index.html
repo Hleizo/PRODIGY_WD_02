@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stopwatch — Task 02</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="head">
+      <h1>Stopwatch</h1>
+      <p class="subtitle">Start · Pause · Reset · Laps · Export</p>
+    </header>
+
+    <section class="display" aria-live="polite" aria-atomic="true">
+      <div id="time">00:00.00</div>
+    </section>
+
+    <section class="controls">
+      <button id="startPause" class="btn primary" aria-pressed="false">Start</button>
+      <button id="lap" class="btn" disabled>Lap</button>
+      <button id="reset" class="btn" disabled>Reset</button>
+      <button id="export" class="btn ghost" disabled>Export CSV</button>
+    </section>
+
+    <section class="laps" aria-label="Lap times">
+      <div class="laps-head">
+        <h2>Laps</h2>
+        <button id="clearLaps" class="link" disabled>Clear</button>
+      </div>
+      <div class="table">
+        <div class="row row--head">
+          <span>#</span><span>Lap</span><span>Total</span>
+        </div>
+        <div id="lapRows" class="rows"></div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <p>Keyboard: <kbd>Space</kbd> = Start/Pause, <kbd>L</kbd> = Lap, <kbd>R</kbd> = Reset</p>
+    </footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
