@@ -1,131 +1,188 @@
-// ----- Stopwatch logic -----
-let startTime = 0;     // timestamp from performance.now()
-let elapsed = 0;       // ms accumulated while paused/running
-let running = false;
-let rafId = null;
-
-const timeEl = document.getElementById('time');
-const btnStartPause = document.getElementById('startPause');
-const btnLap = document.getElementById('lap');
-const btnReset = document.getElementById('reset');
-const btnExport = document.getElementById('export');
-const btnClear = document.getElementById('clearLaps');
-const lapRows = document.getElementById('lapRows');
-
-const laps = [];           // {lap:ms, total:ms}
-let lastLapTotal = 0;
-
-function format(ms){
-  // returns "MM:SS.CC" (minutes, seconds, centiseconds) or adds hours if needed
-  const totalCs = Math.floor(ms / 10);
-  const cs = totalCs % 100;
-  const totalSec = Math.floor(totalCs / 100);
-  const s = totalSec % 60;
-  const totalMin = Math.floor(totalSec / 60);
-  const m = totalMin % 60;
-  const h = Math.floor(totalMin / 60);
-  const pad = (n, z = 2) => String(n).padStart(z, '0');
-  return (h > 0 ? `${pad(h)}:` : '') + `${pad(m)}:${pad(s)}.${pad(cs)}`;
+/* ========= base theme ========= */
+:root{
+  --bg:#0e1223;
+  --panel:#141936;
+  --panel-2:#0f1330;
+  --surface:rgba(255,255,255,.04);
+  --ink:#eef2ff;
+  --muted:#b9c0f1;
+  --line:#232a57;
+  --accent:#7c5cff;       /* user-changable */
+  --accent-ink:#0d051d;
+  --ok:#22c55e;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+  --radius:18px;
 }
 
-function update(){
-  const now = performance.now();
-  elapsed = now - startTime;
-  timeEl.textContent = format(elapsed);
-  rafId = requestAnimationFrame(update);
+:root.light{
+  --bg:#f5f7ff;
+  --panel:#ffffff;
+  --panel-2:#ffffff;
+  --surface:#f2f4ff;
+  --ink:#0b1020;
+  --muted:#5a628a;
+  --line:#e2e6ff;
+  --accent:#5a6cff;
+  --accent-ink:#ffffff;
 }
 
-function start(){
-  running = true;
-  btnStartPause.textContent = 'Pause';
-  btnStartPause.setAttribute('aria-pressed', 'true');
-  btnLap.disabled = false;
-  btnReset.disabled = false;
-  btnExport.disabled = laps.length === 0;
-  btnClear.disabled = laps.length === 0;
+/* playful moving blobs in back */
+.bg-blob,.bg-blob2{
+  position:fixed; inset:auto; z-index:-1; pointer-events:none;
+  width:60vmax; height:60vmax; filter:blur(80px); opacity:.4;
+  background:radial-gradient(closest-side, var(--accent) 0%, transparent 70%);
+  animation: float 18s ease-in-out infinite;
+}
+.bg-blob{top:-10vmax; right:-10vmax}
+.bg-blob2{bottom:-15vmax; left:-15vmax; animation-duration:22s}
 
-  startTime = performance.now() - elapsed;
-  rafId = requestAnimationFrame(update);
+@keyframes float{
+  0%{transform:translate3d(0,0,0) rotate(0)}
+  50%{transform:translate3d(2vmax, -1vmax, 0) rotate(10deg)}
+  100%{transform:translate3d(0,0,0) rotate(0)}
 }
 
-function pause(){
-  running = false;
-  btnStartPause.textContent = 'Start';
-  btnStartPause.setAttribute('aria-pressed', 'false');
-  cancelAnimationFrame(rafId);
+/* ========= layout ========= */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:500 16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans";
 }
 
-function reset(){
-  pause();
-  elapsed = 0;
-  lastLapTotal = 0;
-  timeEl.textContent = '00:00.00';
-  laps.length = 0;
-  lapRows.innerHTML = '';
-  btnLap.disabled = true;
-  btnReset.disabled = true;
-  btnExport.disabled = true;
-  btnClear.disabled = true;
+.shell{
+  min-height:100svh;
+  max-width:1000px; margin:0 auto; padding:24px 18px 40px;
 }
 
-function addLap(){
-  const total = elapsed;
-  const lapTime = total - lastLapTotal;
-  lastLapTotal = total;
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:6px;
+}
+.app-title{margin:0; font-size:clamp(22px,4vw,32px); letter-spacing:.3px}
 
-  laps.push({ lap: lapTime, total });
-  renderLaps();
-  btnExport.disabled = false;
-  btnClear.disabled = false;
+.controls-right{display:flex; gap:8px; align-items:center}
+
+.color-swatch{position:relative; display:inline-grid; place-items:center}
+.color-swatch input{appearance:none; width:0; height:0; position:absolute}
+.color-swatch .swatch{
+  width:32px; height:32px; border-radius:999px;
+  background:var(--accent); border:2px solid rgba(0,0,0,.2);
+  box-shadow:0 6px 20px rgba(0,0,0,.25), inset 0 0 0 2px rgba(255,255,255,.25);
 }
 
-function renderLaps(){
-  lapRows.innerHTML = laps.map((l, i) => `
-    <div class="row">
-      <span>${i + 1}</span>
-      <span>${format(l.lap)}</span>
-      <span>${format(l.total)}</span>
-    </div>
-  `).join('');
+.tabs{
+  display:flex; gap:8px; margin:12px 0 16px;
+}
+.tab{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink); padding:10px 16px; border-radius:14px;
+  cursor:pointer; font-weight:700; letter-spacing:.2px;
+  transition:transform .06s ease, box-shadow .06s ease, background .2s;
+}
+.tab.active{background:linear-gradient(180deg, rgba(255,255,255,.08), transparent), var(--panel); box-shadow:0 10px 28px rgba(0,0,0,.24)}
+.tab:hover{transform:translateY(-1px)}
+
+.panel{
+  display:none; animation:fadeIn .28s ease;
+}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:.0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.02)), var(--panel);
+  border:1px solid var(--line); border-radius:var(--radius); padding:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
 }
 
-function exportCSV(){
-  if (!laps.length) return;
-  const header = 'Lap #,Lap,Total\n';
-  const lines = laps.map((l, i) => `${i + 1},${format(l.lap)},${format(l.total)}`).join('\n');
-  const csv = header + lines;
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'stopwatch_laps.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+.time-wrap{display:grid; place-items:center}
+.time{
+  font-variant-numeric:tabular-nums; font-weight:800; line-height:1;
+  font-size:clamp(44px, 10vw, 82px); letter-spacing:.5px;
+  padding:18px 24px; border-radius:18px; width:100%; text-align:center;
+  background:var(--surface); border:1px solid var(--line);
 }
 
-function clearLaps(){
-  laps.length = 0;
-  lastLapTotal = 0;
-  lapRows.innerHTML = '';
-  btnExport.disabled = true;
-  btnClear.disabled = true;
+.button-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:18px 0 12px}
+.btn{
+  cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  padding:10px 16px; border-radius:12px; font-weight:800; min-width:120px;
+  transition:transform .06s ease, box-shadow .06s ease, background .2s;
+  position:relative; overflow:hidden;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.55; cursor:not-allowed; transform:none}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:transparent}
+.btn.ghost{background:transparent}
+.btn.icon{min-width:auto; padding:10px}
+
+.link{background:transparent; border:0; color:var(--accent); cursor:pointer; font-weight:800}
+.hint{color:var(--muted); margin-top:6px}
+
+.lap-card{margin-top:8px}
+.lap-head{display:flex; align-items:center; justify-content:space-between}
+.table{margin-top:10px; border:1px solid var(--line); border-radius:14px; overflow:hidden}
+.row{display:grid; grid-template-columns:64px 1fr 1fr; gap:12px; padding:10px 14px; align-items:center}
+.row--head{background:rgba(255,255,255,.05); color:var(--muted); font-weight:800}
+.rows .row:nth-child(odd){background:rgba(255,255,255,.03)}
+
+/* forms / inputs */
+.input{
+  width:100%; background:var(--surface); color:var(--ink);
+  border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+}
+.area{resize:vertical}
+.form{display:grid; gap:10px; margin-bottom:12px}
+
+.toolbar{display:flex; justify-content:flex-end; margin:8px 0}
+.filter{display:flex; align-items:center; gap:8px; color:var(--muted)}
+
+.list{display:grid; gap:8px}
+.task{
+  display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+  padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);
+  transition:transform .12s ease, background .2s;
+}
+.task.done{opacity:.7}
+.task .title{font-weight:700}
+.task .meta{color:var(--muted); font-size:13px}
+.badge{padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px}
+.badge.warn{border-color:var(--warn); color:var(--warn)}
+.badge.ok{border-color:var(--ok); color:var(--ok)}
+.task button{border:0; background:transparent; cursor:pointer; color:var(--muted); font-weight:800}
+.task button:hover{color:var(--ink)}
+
+.grid-notes{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px}
+.note{
+  padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--panel-2);
+  display:grid; gap:6px; transition:transform .12s ease;
+}
+.note:hover{transform:translateY(-2px)}
+.note h3{margin:2px 0}
+.note p{margin:0; color:var(--muted)}
+.note .bar{display:flex; justify-content:space-between; align-items:center; gap:6px}
+.note .bar button{border:0; background:transparent; cursor:pointer; color:var(--muted); font-weight:800}
+.note .bar button:hover{color:var(--ink)}
+
+.row-between{display:flex; gap:8px; align-items:center; justify-content:space-between}
+
+.foot{margin-top:22px; text-align:center; color:var(--muted)}
+kbd{padding:.1rem .4rem; border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; background:var(--surface); font-weight:800}
+
+/* ripple effect host */
+#rippleHost{position:fixed; inset:0; pointer-events:none}
+.rip{
+  position:absolute; width:4px; height:4px; border-radius:999px; opacity:.6;
+  background:var(--accent); transform:translate(-50%,-50%) scale(1);
+  animation:rip 650ms ease-out forwards;
+}
+@keyframes rip{
+  to{opacity:0; transform:translate(-50%,-50%) scale(30)}
 }
 
-// ----- Events -----
-btnStartPause.addEventListener('click', () => running ? pause() : start());
-btnLap.addEventListener('click', addLap);
-btnReset.addEventListener('click', reset);
-btnExport.addEventListener('click', exportCSV);
-btnClear.addEventListener('click', clearLaps);
-
-window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space'){ e.preventDefault(); running ? pause() : start(); }
-  else if (e.key.toLowerCase() === 'l' && !btnLap.disabled){ addLap(); }
-  else if (e.key.toLowerCase() === 'r' && !btnReset.disabled){ reset(); }
-});
-
-// Start in a clean state
-reset();
+/* small screens */
+@media (max-width:540px){
+  .row{grid-template-columns:48px 1fr 1fr}
+}
