@@ -3,45 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Stopwatch — Task 02</title>
+  <title>Productive Stopwatch — Task 02</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="app">
-    <header class="head">
-      <h1>Stopwatch</h1>
-      <p class="subtitle">Start · Pause · Reset · Laps · Export</p>
-    </header>
+  <div class="bg-blob" aria-hidden="true"></div>
+  <div class="bg-blob2" aria-hidden="true"></div>
 
-    <section class="display" aria-live="polite" aria-atomic="true">
-      <div id="time">00:00.00</div>
-    </section>
+  <main class="shell">
+    <header class="topbar">
+      <h1 class="app-title">Productive Stopwatch</h1>
 
-    <section class="controls">
-      <button id="startPause" class="btn primary" aria-pressed="false">Start</button>
-      <button id="lap" class="btn" disabled>Lap</button>
-      <button id="reset" class="btn" disabled>Reset</button>
-      <button id="export" class="btn ghost" disabled>Export CSV</button>
-    </section>
+      <div class="controls-right">
+        <!-- Color picker -->
+        <label class="color-swatch" title="Accent color">
+          <input id="accentPicker" type="color" value="#7c5cff" aria-label="Pick accent color" />
+          <span class="swatch"></span>
+        </label>
 
-    <section class="laps" aria-label="Lap times">
-      <div class="laps-head">
-        <h2>Laps</h2>
-        <button id="clearLaps" class="link" disabled>Clear</button>
-      </div>
-      <div class="table">
-        <div class="row row--head">
-          <span>#</span><span>Lap</span><span>Total</span>
-        </div>
-        <div id="lapRows" class="rows"></div>
-      </div>
-    </section>
-
-    <footer class="foot">
-      <p>Keyboard: <kbd>Space</kbd> = Start/Pause, <kbd>L</kbd> = Lap, <kbd>R</kbd> = Reset</p>
-    </footer>
-  </main>
-
-  <script src="script.js"></script>
-</body>
-</html>
+        <!-- Theme toggle -->
+        <button id="themeToggle" class="btn icon" aria-label="Toggle theme" title="Toggle theme">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M12 2a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 16a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm8-6a1 1 0 0 1 1 1 1 1 0 0 1-1 1h-2a
