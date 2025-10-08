@@ -24,4 +24,91 @@
         <!-- Theme toggle -->
         <button id="themeToggle" class="btn icon" aria-label="Toggle theme" title="Toggle theme">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <path d="M12 2a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 16a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm8-6a1 1 0 0 1 1 1 1 1 0 0 1-1 1h-2a
+            <path d="M12 2a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm0 16a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm8-6a1 1 0 0 1 1 1 1 1 0 0 1-1 1h-2a1 1 0 1 1 0-2h2ZM6 13a1 1 0 1 1 0-2H4a1 1 0 1 1 0-2h2a1 1 0 1 1 0 2H4a1 1 0 1 1 0 2h2Zm10.95 6.536a1 1 0 1 1-1.414 1.414l-1.414-1.414a1 1 0 1 1 1.414-1.414l1.414 1.414ZM8.879 6.464a1 1 0 1 1-1.415-1.415L8.88 3.636A1 1 0 1 1 10.293 5.05L8.879 6.464Zm7.657-2.828 1.414 1.414a1 1 0 0 1-1.414 1.414L15.12 5.05A1 1 0 1 1 16.536 3.636ZM7.05 17.95l1.414-1.414a1 1 0 1 1 1.415 1.414L8.465 19.364A1 1 0 0 1 7.05 17.95Z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="tabs" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" data-tab="stopwatch">Stopwatch</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="tasks">Tasks</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="notes">Notes</button>
+    </nav>
+
+    <!-- STOPWATCH PANEL -->
+    <section id="stopwatch" class="panel active" role="tabpanel" aria-labelledby="tab-stopwatch">
+      <div class="time-wrap">
+        <div id="time" class="time">00:00.00</div>
+      </div>
+
+      <div class="button-row">
+        <button id="startPause" class="btn primary" aria-pressed="false">Start</button>
+        <button id="lap" class="btn" disabled>Lap</button>
+        <button id="reset" class="btn" disabled>Reset</button>
+        <button id="export" class="btn ghost" disabled>Export CSV</button>
+      </div>
+
+      <div class="lap-card">
+        <div class="lap-head">
+          <h2>Laps</h2>
+          <div class="lap-actions">
+            <button id="clearLaps" class="link" disabled>Clear</button>
+          </div>
+        </div>
+        <div class="table">
+          <div class="row row--head"><span>#</span><span>Lap</span><span>Total</span></div>
+          <div id="lapRows" class="rows"></div>
+        </div>
+      </div>
+
+      <p class="hint">Shortcuts: <kbd>Space</kbd> Start/Pause • <kbd>L</kbd> Lap • <kbd>R</kbd> Reset</p>
+    </section>
+
+    <!-- TASKS PANEL -->
+    <section id="tasks" class="panel" role="tabpanel" aria-labelledby="tab-tasks">
+      <form id="taskForm" class="card form">
+        <input id="taskTitle" class="input" type="text" placeholder="Add a new task…" required />
+        <input id="taskDue" class="input" type="datetime-local" />
+        <button class="btn primary">Add Task</button>
+      </form>
+
+      <div class="toolbar">
+        <label class="filter">
+          <span>Show:</span>
+          <select id="taskFilter" class="input">
+            <option value="all">All</option>
+            <option value="open" selected>Open</option>
+            <option value="done">Completed</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="taskList" class="card list"></div>
+    </section>
+
+    <!-- NOTES PANEL -->
+    <section id="notes" class="panel" role="tabpanel" aria-labelledby="tab-notes">
+      <form id="noteForm" class="card form">
+        <input id="noteTitle" class="input" type="text" placeholder="Note title…" required />
+        <textarea id="noteBody" class="input area" rows="4" placeholder="Write your note…"></textarea>
+        <div class="row-between">
+          <input id="noteSearch" class="input" type="search" placeholder="Search notes…" />
+          <button class="btn primary">Add Note</button>
+        </div>
+      </form>
+
+      <div id="noteList" class="grid-notes"></div>
+    </section>
+
+    <footer class="foot">
+      <small>© <span id="year"></span> Hasan Zeineddin</small>
+    </footer>
+  </main>
+
+  <div id="rippleHost" aria-hidden="true"></div>
+  <script src="script.js"></script>
+</body>
+</html>
