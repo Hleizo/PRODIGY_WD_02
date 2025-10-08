@@ -1,268 +1,155 @@
-/* ========== helpers ========== */
-const $ = (sel, ctx=document) => ctx.querySelector(sel);
-const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
-const storage = {
-  get: (k, d=null) => {
-    try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; }
-  },
-  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-  rm:  (k) => localStorage.removeItem(k),
-};
-
-/* ========== theme & color ========== */
-const accentPicker = $('#accentPicker');
-const themeToggle  = $('#themeToggle');
-
-function applyAccent(hex){
-  document.documentElement.style.setProperty('--accent', hex);
-  $('.color-swatch .swatch').style.background = hex;
+/* ===== Base Theme ===== */
+:root{
+  --bg:#0e1223;
+  --panel:#141936;
+  --panel-2:#0f1330;
+  --surface:rgba(255,255,255,.04);
+  --ink:#eef2ff;
+  --muted:#b9c0f1;
+  --line:#232a57;
+  --accent:#7c5cff;       /* user editable */
+  --accent-ink:#0d051d;
+  --ok:#22c55e;
+  --warn:#f59e0b;
+  --radius:18px;
 }
-function loadTheme(){
-  const savedAccent = storage.get('accent', null);
-  const light = storage.get('theme-light', false);
-  if(savedAccent){ accentPicker.value = savedAccent; applyAccent(savedAccent); }
-  document.documentElement.classList.toggle('light', !!light);
+:root.light{
+  --bg:#f5f7ff; --panel:#fff; --panel-2:#fff; --surface:#f2f4ff;
+  --ink:#0b1020; --muted:#5a628a; --line:#e2e6ff; --accent:#5a6cff; --accent-ink:#fff;
 }
-accentPicker.addEventListener('input', (e)=>{
-  applyAccent(e.target.value);
-  storage.set('accent', e.target.value);
-  boom(); // tiny ripple delight
-});
-themeToggle.addEventListener('click', ()=>{
-  const nowLight = !document.documentElement.classList.contains('light');
-  document.documentElement.classList.toggle('light', nowLight);
-  storage.set('theme-light', nowLight);
-  boom();
-});
 
-/* cute ripple feedback anywhere you click */
-const rippleHost = $('#rippleHost');
-function boom(x, y){
-  // if triggered by keyboard / program, put it near header
-  if(x==null || y==null){
-    const rect = $('.topbar').getBoundingClientRect();
-    x = rect.right - 30; y = rect.top + rect.height/2;
-  }
-  const d = document.createElement('span');
-  d.className = 'rip';
-  d.style.left = x+'px'; d.style.top = y+'px';
-  rippleHost.appendChild(d);
-  setTimeout(()=>d.remove(), 700);
+/* Background animation blobs */
+.bg-blob,.bg-blob2{
+  position:fixed; inset:auto; z-index:-1; pointer-events:none;
+  width:60vmax; height:60vmax; filter:blur(80px); opacity:.4;
+  background:radial-gradient(closest-side, var(--accent) 0%, transparent 70%);
+  animation: float 18s ease-in-out infinite;
 }
-window.addEventListener('click', (e)=>{
-  if(e.target.closest('.btn,.tab,.color-swatch,.task button,.note .bar button')) {
-    const {clientX, clientY} = e;
-    boom(clientX, clientY);
-  }
-});
+.bg-blob{top:-10vmax; right:-10vmax}
+.bg-blob2{bottom:-15vmax; left:-15vmax; animation-duration:22s}
+@keyframes float{
+  0%{transform:translate3d(0,0,0)}
+  50%{transform:translate3d(2vmax,-1vmax,0)}
+  100%{transform:none}
+}
 
-/* ========== tabs ========== */
-$$('.tab').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    $$('.tab').forEach(b=>b.classList.remove('active'));
-    $$('.panel').forEach(p=>p.classList.remove('active'));
-    btn.classList.add('active');
-    $('#'+btn.dataset.tab).classList.add('active');
-  });
-});
+/* ===== Layout ===== */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:500 16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+}
 
-/* ========== stopwatch ========== */
-let startTime = 0, elapsed = 0, running = false, raf = null;
-const timeEl = $('#time');
-const btnStartPause = $('#startPause');
-const btnLap = $('#lap');
-const btnReset = $('#reset');
-const btnExport = $('#export');
-const btnClear = $('#clearLaps');
-const lapRows = $('#lapRows');
-const laps = [];
-let lastLapTotal = 0;
+.shell{min-height:100svh; max-width:1000px; margin:0 auto; padding:24px 18px 40px}
 
-const fmt = (ms)=>{
-  const cs = Math.floor(ms/10)%100;
-  const s  = Math.floor(ms/1000)%60;
-  const m  = Math.floor(ms/60000)%60;
-  const h  = Math.floor(ms/3600000);
-  const pad = (n,z=2)=>String(n).padStart(z,'0');
-  return (h>0?`${pad(h)}:`:'') + `${pad(m)}:${pad(s)}.${pad(cs)}`;
-};
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px}
+.app-title{margin:0; font-size:clamp(22px,4vw,32px)}
+.controls-right{display:flex; gap:8px; align-items:center}
 
-function tick(){
-  elapsed = performance.now() - startTime;
-  timeEl.textContent = fmt(elapsed);
-  raf = requestAnimationFrame(tick);
+.color-swatch{position:relative; display:inline-grid; place-items:center}
+.color-swatch input{appearance:none; width:0; height:0; position:absolute}
+.color-swatch .swatch{
+  width:32px; height:32px; border-radius:999px;
+  background:var(--accent); border:2px solid rgba(0,0,0,.2);
+  box-shadow:0 6px 20px rgba(0,0,0,.25), inset 0 0 0 2px rgba(255,255,255,.25);
 }
-function start(){
-  running = true; btnStartPause.textContent='Pause'; btnStartPause.setAttribute('aria-pressed','true');
-  btnLap.disabled = btnReset.disabled = false;
-  startTime = performance.now() - elapsed;
-  raf = requestAnimationFrame(tick);
-}
-function pause(){
-  running = false; btnStartPause.textContent='Start'; btnStartPause.setAttribute('aria-pressed','false');
-  cancelAnimationFrame(raf);
-}
-function reset(){
-  pause(); elapsed = 0; lastLapTotal = 0; timeEl.textContent='00:00.00';
-  laps.length=0; lapRows.innerHTML=''; btnLap.disabled=true; btnReset.disabled=true;
-  btnExport.disabled = btnClear.disabled = true;
-}
-function addLap(){
-  const total = elapsed, lap = total - lastLapTotal; lastLapTotal = total;
-  laps.push({lap,total}); renderLaps(); btnExport.disabled=false; btnClear.disabled=false;
-}
-function renderLaps(){
-  lapRows.innerHTML = laps.map((l,i)=>`
-    <div class="row">
-      <span>${i+1}</span><span>${fmt(l.lap)}</span><span>${fmt(l.total)}</span>
-    </div>
-  `).join('');
-}
-function exportCSV(){
-  if(!laps.length) return;
-  const csv = 'Lap #,Lap,Total\n' + laps.map((l,i)=>`${i+1},${fmt(l.lap)},${fmt(l.total)}`).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement('a'), {href:url, download:'stopwatch_laps.csv'});
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-function clearLaps(){ laps.length=0; lastLapTotal=0; lapRows.innerHTML=''; btnExport.disabled=btnClear.disabled=true; }
 
-btnStartPause.addEventListener('click', ()=>running?pause():start());
-btnLap.addEventListener('click', addLap);
-btnReset.addEventListener('click', reset);
-btnExport.addEventListener('click', exportCSV);
-btnClear.addEventListener('click', clearLaps);
-window.addEventListener('keydown', (e)=>{
-  if(e.code==='Space'){ e.preventDefault(); running?pause():start(); }
-  else if(e.key.toLowerCase()==='l' && !btnLap.disabled){ addLap(); }
-  else if(e.key.toLowerCase()==='r' && !btnReset.disabled){ reset(); }
-});
-
-/* ========== tasks ========== */
-const taskForm = $('#taskForm');
-const taskTitle = $('#taskTitle');
-const taskDue = $('#taskDue');
-const taskList = $('#taskList');
-const taskFilter = $('#taskFilter');
-
-let tasks = storage.get('tasks', []); // [{id, title, due, done}]
-function saveTasks(){ storage.set('tasks', tasks); }
-function taskRow(t){
-  const overdue = !t.done && t.due && (new Date(t.due) < new Date());
-  const dueText = t.due ? new Date(t.due).toLocaleString() : 'No due';
-  return `
-  <div class="task ${t.done?'done':''}" data-id="${t.id}">
-    <label><input type="checkbox" ${t.done?'checked':''} /></label>
-    <div>
-      <div class="title">${t.title}</div>
-      <div class="meta">${dueText} ${overdue?'<span class="badge warn">Overdue</span>':''} ${t.done?'<span class="badge ok">Done</span>':''}</div>
-    </div>
-    <div>
-      <button class="del" title="Delete">✕</button>
-    </div>
-  </div>`;
+.tabs{display:flex; gap:8px; margin:12px 0 16px}
+.tab{
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink); padding:10px 16px; border-radius:14px;
+  cursor:pointer; font-weight:700;
+  transition:transform .06s ease, box-shadow .06s ease, background .2s;
 }
-function renderTasks(){
-  const mode = taskFilter.value;
-  let view = tasks.slice();
-  if(mode==='open') view = view.filter(t=>!t.done);
-  if(mode==='done') view = view.filter(t=>t.done);
-  if(mode==='overdue') view = view.filter(t=>!t.done && t.due && (new Date(t.due)<new Date()));
-  // sort: overdue first, then by due date
-  view.sort((a,b)=>{
-    const ao = !a.done && a.due && new Date(a.due)<new Date();
-    const bo = !b.done && b.due && new Date(b.due)<new Date();
-    if(ao!==bo) return ao? -1:1;
-    return (a.due||'').localeCompare(b.due||'');
-  });
-  taskList.innerHTML = view.map(taskRow).join('') || `<div class="card">No tasks yet.</div>`;
+.tab.active{background:linear-gradient(180deg, rgba(255,255,255,.08), transparent), var(--panel); box-shadow:0 10px 28px rgba(0,0,0,.24)}
+.tab:hover{transform:translateY(-1px)}
+
+.panel{display:none; animation:fadeIn .28s ease}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.02)), var(--panel);
+  border:1px solid var(--line); border-radius:var(--radius); padding:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
 }
-taskForm.addEventListener('submit', (e)=>{
-  e.preventDefault();
-  const title = taskTitle.value.trim();
-  if(!title) return;
-  tasks.push({id:crypto.randomUUID(), title, due:taskDue.value||null, done:false});
-  saveTasks(); renderTasks(); taskForm.reset(); taskTitle.focus();
-});
-taskList.addEventListener('change', (e)=>{
-  const wrap = e.target.closest('.task'); if(!wrap) return;
-  const id = wrap.dataset.id;
-  const t = tasks.find(x=>x.id===id); if(!t) return;
-  t.done = e.target.checked; saveTasks(); renderTasks();
-});
-taskList.addEventListener('click', (e)=>{
-  if(e.target.classList.contains('del')){
-    const wrap = e.target.closest('.task'); const id = wrap.dataset.id;
-    tasks = tasks.filter(x=>x.id!==id); saveTasks(); renderTasks();
-  }
-});
-taskFilter.addEventListener('change', renderTasks);
 
-/* ========== notes ========== */
-const noteForm = $('#noteForm');
-const noteTitle = $('#noteTitle');
-const noteBody = $('#noteBody');
-const noteSearch = $('#noteSearch');
-const noteList = $('#noteList');
-
-let notes = storage.get('notes', []); // [{id,title,body,ts}]
-function saveNotes(){ storage.set('notes', notes); }
-function noteCard(n){
-  const date = new Date(n.ts).toLocaleString();
-  const snippet = (n.body||'').slice(0,120);
-  return `
-  <article class="note" data-id="${n.id}">
-    <div class="bar">
-      <h3>${n.title}</h3>
-      <div>
-        <button class="edit" title="Edit">✎</button>
-        <button class="rm" title="Delete">✕</button>
-      </div>
-    </div>
-    <p>${snippet}</p>
-    <small class="meta">${date}</small>
-  </article>`;
+.time-wrap{display:grid; place-items:center}
+.time{
+  font-variant-numeric:tabular-nums; font-weight:800; line-height:1;
+  font-size:clamp(44px, 10vw, 82px); letter-spacing:.5px;
+  padding:18px 24px; border-radius:18px; width:100%; text-align:center;
+  background:var(--surface); border:1px solid var(--line);
 }
-function renderNotes(){
-  const q = noteSearch.value.trim().toLowerCase();
-  const view = notes
-    .filter(n => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
-    .sort((a,b)=>b.ts - a.ts);
-  noteList.innerHTML = view.map(noteCard).join('') || `<div class="card">No notes yet.</div>`;
+
+.button-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:18px 0 12px}
+.btn{
+  cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  padding:10px 16px; border-radius:12px; font-weight:800; min-width:120px;
+  transition:transform .06s ease, box-shadow .06s ease, background .2s;
 }
-noteForm.addEventListener('submit', (e)=>{
-  e.preventDefault();
-  const title = noteTitle.value.trim(); if(!title) return;
-  notes.push({id:crypto.randomUUID(), title, body:noteBody.value||'', ts:Date.now()});
-  saveNotes(); renderNotes(); noteForm.reset(); noteTitle.focus();
-});
-noteList.addEventListener('click', (e)=>{
-  const card = e.target.closest('.note'); if(!card) return;
-  const id = card.dataset.id;
-  const n = notes.find(x=>x.id===id); if(!n) return;
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.55; cursor:not-allowed; transform:none}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:transparent}
+.btn.ghost{background:transparent}
+.btn.icon{min-width:auto; padding:10px}
 
-  if(e.target.classList.contains('rm')){
-    notes = notes.filter(x=>x.id!==id); saveNotes(); renderNotes();
-  }else if(e.target.classList.contains('edit')){
-    const title = prompt('Edit title:', n.title);
-    if(title===null) return;
-    const body  = prompt('Edit body:', n.body);
-    if(body===null) return;
-    n.title = title.trim() || n.title;
-    n.body  = body; n.ts = Date.now();
-    saveNotes(); renderNotes();
-  }
-});
-noteSearch.addEventListener('input', renderNotes);
+.link{background:transparent; border:0; color:var(--accent); cursor:pointer; font-weight:800}
+.hint{color:var(--muted); margin-top:6px}
 
-/* ========== footer year & init ========== */
-$('#year').textContent = new Date().getFullYear();
+.lap-card{margin-top:8px}
+.lap-head{display:flex; align-items:center; justify-content:space-between}
+.table{margin-top:10px; border:1px solid var(--line); border-radius:14px; overflow:hidden}
+.row{display:grid; grid-template-columns:64px 1fr 1fr; gap:12px; padding:10px 14px; align-items:center}
+.row--head{background:rgba(255,255,255,.05); color:var(--muted); font-weight:800}
+.rows .row:nth-child(odd){background:rgba(255,255,255,.03)}
 
-function init(){
-  loadTheme();
-  renderTasks();
-  renderNotes();
-  reset(); // stopwatch clean state
+/* Forms */
+.input{
+  width:100%; background:var(--surface); color:var(--ink);
+  border:1px solid var(--line); border-radius:12px; padding:10px 12px;
 }
-init();
+.area{resize:vertical}
+.form{display:grid; gap:10px; margin-bottom:12px}
+
+.toolbar{display:flex; justify-content:flex-end; margin:8px 0}
+.filter{display:flex; align-items:center; gap:8px; color:var(--muted)}
+
+.list{display:grid; gap:8px}
+.task{
+  display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+  padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2);
+  transition:transform .12s ease, background .2s;
+}
+.task.done{opacity:.7}
+.task .title{font-weight:700}
+.task .meta{color:var(--muted); font-size:13px}
+.badge{padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px}
+.badge.warn{border-color:var(--warn); color:var(--warn)}
+.badge.ok{border-color:var(--ok); color:var(--ok)}
+.task button{border:0; background:transparent; cursor:pointer; color:var(--muted); font-weight:800}
+.task button:hover{color:var(--ink)}
+
+.grid-notes{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px}
+.note{
+  padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--panel-2);
+  display:grid; gap:6px; transition:transform .12s ease;
+}
+.note:hover{transform:translateY(-2px)}
+.note h3{margin:2px 0}
+.note p{margin:0; color:var(--muted)}
+.note .bar{display:flex; justify-content:space-between; align-items:center; gap:6px}
+.note .bar button{border:0; background:transparent; cursor:pointer; color:var(--muted); font-weight:800}
+.note .bar button:hover{color:var(--ink)}
+
+.row-between{display:flex; gap:8px; align-items:center; justify-content:space-between}
+
+.foot{margin-top:22px; text-align:center; color:var(--muted)}
+kbd{padding:.1rem .4rem; border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; background:var(--surface); font-weight:800}
+
+/* Small screens */
+@media (max-width:540px){
+  .row{grid-template-columns:48px 1fr 1fr}
+}
