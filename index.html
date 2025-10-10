@@ -3,102 +3,45 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Productive Stopwatch — Task 02</title>
-  <link rel="stylesheet" href="./style.css" />
+  <title>Stopwatch — Task 02</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- animated background -->
-  <div class="bg g1" aria-hidden="true"></div>
-  <div class="bg g2" aria-hidden="true"></div>
-
-  <main class="wrap">
-    <header class="top">
-      <h1 class="brand">Productive Stopwatch</h1>
-      <div class="right">
-        <div class="chips" role="group" aria-label="Theme">
-          <button class="chip" data-accent="#7c5cff" title="Purple"></button>
-          <button class="chip" data-accent="#10b981" title="Green"></button>
-          <button class="chip" data-accent="#f59e0b" title="Amber"></button>
-          <button class="chip" data-accent="#3b82f6" title="Blue"></button>
-        </div>
-        <button id="toggleTheme" class="btn icon" type="button" title="Light/Dark">☼/☾</button>
-      </div>
+  <main class="app">
+    <header class="head">
+      <h1>Stopwatch</h1>
+      <p class="subtitle">Start · Pause · Reset · Laps · Export</p>
     </header>
 
-    <!-- tabs -->
-    <nav class="tabs" role="tablist">
-      <button class="tab active" data-tab="stopwatch" role="tab" aria-selected="true" type="button">Stopwatch</button>
-      <button class="tab" data-tab="tasks" role="tab" aria-selected="false" type="button">Tasks</button>
-      <button class="tab" data-tab="notes" role="tab" aria-selected="false" type="button">Notes</button>
-      <span class="tab-underline" aria-hidden="true"></span>
-    </nav>
+    <section class="display" aria-live="polite" aria-atomic="true">
+      <div id="time">00:00.00</div>
+    </section>
 
-    <!-- STOPWATCH -->
-    <section id="stopwatch" class="panel active" role="tabpanel">
-      <div class="glass card center">
-        <div id="time" class="time">00:00.00</div>
-        <div class="row">
-          <button id="startPause" class="btn primary" type="button">Start</button>
-          <button id="lap" class="btn" type="button" disabled>Lap</button>
-          <button id="reset" class="btn" type="button" disabled>Reset</button>
-          <button id="export" class="btn ghost" type="button" disabled>Export CSV</button>
-        </div>
-        <p class="hint">Shortcuts: <kbd>Space</kbd> Start/Pause • <kbd>L</kbd> Lap • <kbd>R</kbd> Reset</p>
+    <section class="controls">
+      <button id="startPause" class="btn primary" aria-pressed="false">Start</button>
+      <button id="lap" class="btn" disabled>Lap</button>
+      <button id="reset" class="btn" disabled>Reset</button>
+      <button id="export" class="btn ghost" disabled>Export CSV</button>
+    </section>
+
+    <section class="laps" aria-label="Lap times">
+      <div class="laps-head">
+        <h2>Laps</h2>
+        <button id="clearLaps" class="link" disabled>Clear</button>
       </div>
-
-      <div class="glass card">
-        <div class="card-head">
-          <h2>Laps</h2>
-          <button id="clearLaps" class="link" type="button" disabled>Clear</button>
+      <div class="table">
+        <div class="row row--head">
+          <span>#</span><span>Lap</span><span>Total</span>
         </div>
-        <div class="table">
-          <div class="row head"><span>#</span><span>Lap</span><span>Total</span></div>
-          <div id="lapRows" class="rows"></div>
-        </div>
+        <div id="lapRows" class="rows"></div>
       </div>
     </section>
 
-    <!-- TASKS -->
-    <section id="tasks" class="panel" role="tabpanel">
-      <form id="taskForm" class="glass card form" autocomplete="off">
-        <input id="taskTitle" class="input" type="text" placeholder="Add a task…" required />
-        <input id="taskDue" class="input" type="datetime-local" />
-        <button class="btn primary" type="submit">Add</button>
-      </form>
-
-      <div class="toolbar">
-        <label class="filter">
-          <span>Show:</span>
-          <select id="taskFilter" class="input">
-            <option value="all">All</option>
-            <option value="open" selected>Open</option>
-            <option value="done">Completed</option>
-            <option value="overdue">Overdue</option>
-          </select>
-        </label>
-      </div>
-
-      <div id="taskList" class="grid list"></div>
-    </section>
-
-    <!-- NOTES -->
-    <section id="notes" class="panel" role="tabpanel">
-      <form id="noteForm" class="glass card form" autocomplete="off">
-        <input id="noteTitle" class="input" type="text" placeholder="Note title…" required />
-        <textarea id="noteBody" class="input area" rows="4" placeholder="Write your note…"></textarea>
-        <div class="row between">
-          <input id="noteSearch" class="input" type="search" placeholder="Search notes…" />
-          <button class="btn primary" type="submit">Add</button>
-        </div>
-      </form>
-
-      <div id="noteList" class="note-grid"></div>
-    </section>
-
-    <footer class="foot">© <span id="year"></span> Hasan Zeineddin</footer>
+    <footer class="foot">
+      <p>Keyboard: <kbd>Space</kbd> = Start/Pause, <kbd>L</kbd> = Lap, <kbd>R</kbd> = Reset</p>
+    </footer>
   </main>
 
-  <div id="ripples" aria-hidden="true"></div>
-  <script src="./script.js" defer></script>
+  <script src="script.js"></script>
 </body>
 </html>
